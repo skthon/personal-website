@@ -1,0 +1,59 @@
+version: '3'
+
+services:
+
+    redis:
+        image: redis
+        container_name : skthon_redis
+        environment:
+            - TZ=Asia/Kolkata
+        restart: always
+        hostname: skthon-redis
+        command: redis-server --requirepass skthon
+        networks:
+            - skthon-network
+        volumes:
+            - ./redis_docker:/data:delegated
+
+    postgres:
+        image: postgres
+        container_name : skthon_postgres
+        hostname: skthon-postgres
+        restart: always
+        networks:
+            - skthon-network
+        volumes:
+            - ./postgres_docker:/var/lib/postgresql:cached
+
+    postgres_ui:
+        image: dpage/pgadmin4
+        container_name : skthon_postgres_ui
+        hostname: skthon-postgres-ui
+        restart: always
+        ports:
+            - "5050:80"
+        environment:
+            PGADMIN_DEFAULT_EMAIL: postgres@postgres.com
+            PGADMIN_DEFAULT_PASSWORD: skthon
+        networks:
+            - skthon-network
+
+    web:
+        build: 
+            context: .
+            dockerfile: Dockerfile
+        container_name: skthon_app
+        hostname: skthon-app
+        restart: always
+        ports:
+            - "8081:8000"
+        command: gunicorn -w 3 -b :8000 --chdir /skthon app:app --reload
+        networks:
+            - skthon-network
+        volumes:
+            - ./skthon:/skthon
+        extra_hosts:
+            - "dev.skthon.com:0.0.0.0"
+
+networks:
+    skthon-network:
